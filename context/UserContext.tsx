@@ -25,12 +25,6 @@ export const UserContext= ({children}: AuthProviderProps) => {
     try {
       const getStoreValue = await SecureStore.getItem('key')
       console.log(getStoreValue)
-      if (getStoreValue) {
-        router.push('/(tabs)')
-        return
-      } else {
-        router.push('/(auth)')
-      }
 
 
 

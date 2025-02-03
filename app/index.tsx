@@ -4,10 +4,10 @@ import { Redirect, Slot } from 'expo-router'
 import { useAuth } from '@/context/UserContext'
 
 const Index = () => {
-  const {isAuthenticated} = useAuth()
+  const isAuthenticated = true
 
   return (
-    <Redirect href={isAuthenticated ? '/(tabs)' : '/(auth)'}/>
+    <Redirect href={isAuthenticated ? '/(tabs)' : '/(auth)/'}/>
   )
 }
 

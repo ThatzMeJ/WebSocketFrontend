@@ -99,7 +99,7 @@ const Index = () => {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
-      SecureStore.setItem('key', base64Credentials);
+      await SecureStore.setItem('key', base64Credentials);
       setIsAuthenticated(base64Credentials)
       
       router.push('/(tabs)')

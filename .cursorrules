@@ -1,0 +1,60 @@
+# TypeScript & React Native Conventions
+- Use TypeScript for all code with strict mode
+- Use functional components with interfaces
+- Use lowercase with dashes for directories
+- Favor named exports
+- Use function keyword for pure functions
+- Follow Prettier formatting
+
+# Component Structure
+- Export order: component, subcomponents, helpers, types
+- Use descriptive variable names (isLoading, hasError)
+- Avoid classes, prefer functional patterns
+- Minimize useState/useEffect, prefer context/reducers
+
+# Expo Best Practices
+- Use SafeAreaProvider for safe area management
+- Use expo-router for navigation
+- Implement proper error handling with Zod
+- Use expo-image for optimized images
+- Follow Expo security guidelines
+
+# Testing & Performance
+- Write Jest and React Native Testing Library tests
+- Implement Detox for integration testing
+- Use memo/useMemo/useCallback appropriately
+- Profile with React Native tools
+
+# UI & Accessibility
+- Use Expo built-in components
+- Implement responsive design with useWindowDimensions
+- Support dark mode with useColorScheme
+- Ensure a11y standards with ARIA roles
+- Use react-native-reanimated for animations
+
+# State & Data
+- Use Context + useReducer for global state
+- Use react-query for data fetching
+- Consider Zustand for complex state
+- Implement proper error boundaries
+
+# Security & i18n
+- Use react-native-encrypted-storage
+- Implement proper input sanitization
+- Use expo-localization for i18n
+- Support RTL layouts
+
+# Key Conventions
+1. Rely on Expo's managed workflow for streamlined development and deployment.
+2. Prioritize Mobile Web Vitals (Load Time, Jank, and Responsiveness).
+3. Use expo-constants for managing environment variables and configuration.
+4. Use expo-permissions to handle device permissions gracefully.
+5. Implement expo-updates for over-the-air (OTA) updates.
+6. Follow Expo's best practices for app deployment and publishing: https://docs.expo.dev/distribution/introduction/
+7. Ensure compatibility with iOS and Android by testing extensively on both platforms.
+
+# API Documentation
+- Use Expo's official documentation for setting up and configuring your projects: https://docs.expo.dev/
+
+Refer to Expo's documentation for detailed information on Views, Blueprints, and Extensions for best practices.
+    
