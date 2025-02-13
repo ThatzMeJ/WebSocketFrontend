@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Button,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,8 +14,8 @@ import Entypo from '@expo/vector-icons/Entypo';
 import InputField from '@/components/InputField';
 import { useRouter } from 'expo-router';
 import { encode } from "react-native-base64";
-import { useAuth } from '@/context/UserContext';
 import * as SecureStore from 'expo-secure-store';
+import { useSignIn } from '@clerk/clerk-expo'
 
 interface FormState {
   email: string;
@@ -35,14 +37,14 @@ interface data {
 
 const Index = () => {
   const router = useRouter();
-  const {setIsAuthenticated} = useAuth()
+  const { signIn, setActive, isLoaded } = useSignIn();
   const [form, setForm] = useState<FormState>({
     email: '',
     password: '',
   });
   const [errors, setErrors] = useState<ErrorState>({});
   const [showPassword, setShowPassword] = useState(true);
-
+  const [isLoading, setIsLoading] = useState(false);
 
   // Log errors whenever they are updated
   useEffect(() => {
@@ -52,8 +54,8 @@ const Index = () => {
   const handleInputChange = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
 
- 
-     if (field === 'email' && errors.emailError) {
+
+    if (field === 'email' && errors.emailError) {
       setErrors((prev) => ({
         ...prev,
         emailError: '',
@@ -63,14 +65,14 @@ const Index = () => {
         ...prev,
         passwordError: '',
       }))
-    } 
+    }
 
 
   };
 
   const validateForm = (): boolean => {
     const newErrors: ErrorState = {};
-    
+
     if (!form.email || (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w\w+)+$/).test(form.email) === false) newErrors.emailError = 'Please enter an email';
     if (!form.password) newErrors.passwordError = 'Please enter a password';
 
@@ -79,45 +81,61 @@ const Index = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const authenicateUser = async () => {
-    try {
-      const base64Credentials: string = btoa(`${form.email}:${form.password}`);
-      console.log(base64Credentials);
-  
-      const response = await fetch("http://192.168.1.81:3005/v1/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password
-        })
-      });
-  
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
+  const handleLogin = async () => {
+    if (!isLoaded) {
+      console.error('Clerk is not loaded');
+      return;
+    }
 
-      await SecureStore.setItem('key', base64Credentials);
-      setIsAuthenticated(base64Credentials)
+    setIsLoading(true);
+    try {
+
+      // First attempt sign in
+      const signInAttempt = await signIn.create({
+        identifier: form.email,
+        password: form.password,
+      });
+
+      const str: string[] = ["needs_factor_two","needs_verification"]
+
+      switch (signInAttempt.status) {
+        case "complete":
+            await setActive({ session: signInAttempt.createdSessionId });
+            router.push('/(tabs)');
+            break;
+        case str[0]:
+            // Handle 2FA
+            console.log('Need to handle 2FA')
+            break;
+        case str[1]:
+            // Handle email verification
+            console.log("EMail verification")
+            break;
+    }
       
-      router.push('/(tabs)')
-    } catch (error) {
-      console.error("Authentication failed:", error);
-      return null; // Handle failure gracefully
+    
+    } catch (err: any) {
+      // Handle specific error cases
+      console.error('Login error:', err.errors ? err.errors[0].message : err);
+      setErrors(prev => ({
+        ...prev,
+        passwordError: err.errors ? err.errors[0].message : 'Invalid credentials'
+      }));
+    } finally {
+      setIsLoading(false);
     }
   };
-  
+
+
 
   const handleSubmit = async () => {
     if (validateForm()) {
-      console.log('Form submitted successfully:', form);
-      await authenicateUser()
+      await handleLogin()
     } else {
       console.log('Validation failed');
     }
   };
+
 
   return (
     <KeyboardAvoidingView
@@ -160,10 +178,13 @@ const Index = () => {
 
         {/* Submit Button */}
         <Pressable
-          className="bg-orange-500 rounded-lg py-3 px-6 mt-4 w-72"
+          className={`bg-orange-500 rounded-lg py-3 px-6 mt-4 w-72 ${isLoading ? 'opacity-50' : ''}`}
           onPress={handleSubmit}
+          disabled={isLoading}
         >
-          <Text className="text-white text-center font-bold">Log in</Text>
+          <Text className="text-white text-center font-bold">
+            {isLoading ? 'Logging in...' : 'Log in'}
+          </Text>
         </Pressable>
       </SafeAreaView>
     </KeyboardAvoidingView>

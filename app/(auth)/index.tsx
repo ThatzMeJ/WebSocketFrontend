@@ -7,7 +7,7 @@ const Index = () => {
   const router = useRouter()
 
   const handleSignUpNav = () => {
-    router.push('/(auth)/(signin)')
+    router.push('/(auth)/(signup)')
   }
 
   const handleLogInNav = () => {

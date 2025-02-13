@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Button,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,7 +13,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import InputField from '@/components/InputField';
 import Entypo from '@expo/vector-icons/Entypo';
 import PasswordStrengthMeterBar from 'react-native-password-strength-meter-bar';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
+import { useSignUp } from '@clerk/clerk-expo';
+
+
 
 interface FormState {
   username: string;
@@ -20,7 +25,7 @@ interface FormState {
 }
 
 interface ErrorState {
-  nameError?: string;
+  userNameError?: string;
   emailError?: string;
   passwordError?: string;
 }
@@ -29,7 +34,8 @@ interface ErrorState {
 
 const Index = () => {
   const router = useRouter();
-
+  const { signUp, isLoaded } = useSignUp()
+  const [pendingVerification, setPendingVerification] = useState<boolean>(false)
   const [form, setForm] = useState<FormState>({
     username: '',
     email: '',
@@ -40,16 +46,28 @@ const Index = () => {
 
   // Log errors whenever they are updated
   useEffect(() => {
-    
+
   }, [errors]);
+
+  useEffect(() => {
+    if (pendingVerification) {
+      router.push({
+        pathname: "/(auth)/(signup)/confirmCode",
+        params: { email: `${form.email}` }
+      });
+      setPendingVerification(false)
+    }
+    
+
+  }, [pendingVerification]); // 
 
   const handleInputChange = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
 
-    if (field === 'username' && errors.nameError) {
+    if (field === 'username' && errors.userNameError) {
       setErrors((prev) => ({
         ...prev,
-        nameError: '',
+        userNameError: '',
       }))
     } else if (field === 'email' && errors.emailError) {
       setErrors((prev) => ({
@@ -61,7 +79,7 @@ const Index = () => {
         ...prev,
         passwordError: '',
       }))
-    } 
+    }
 
 
   };
@@ -69,7 +87,7 @@ const Index = () => {
   const validateForm = (): boolean => {
     const newErrors: ErrorState = {};
 
-    if (!form.username) newErrors.nameError = 'Please enter a name';
+    if (!form.username) newErrors.userNameError = 'Please enter a name';
     if (!form.email || (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w\w+)+$/).test(form.email) === false) newErrors.emailError = 'Please enter an email';
     if (!form.password) newErrors.passwordError = 'Please enter a password';
 
@@ -79,37 +97,80 @@ const Index = () => {
   };
 
   const createNewUser = async () => {
-    try {
-      const newUser = JSON.stringify(form)
-      console.log(newUser)
+    if (!isLoaded) {
+      console.error('Clerk is not loaded yet');
+      return;
+    }
 
-      const response = await fetch('http://192.168.1.81:3005/v1/auth/register', {
-        method: 'POST',
-        body: newUser,
-        headers: {
-          'Content-Type': "application/json"
-        }
+    try {
+      await signUp?.create({
+        username: form.username,
+        emailAddress: form.email,
+        password: form.password
       })
 
-      if (!response.ok) {
-        throw new Error('Unable to fetch data')
-      }
-      const data = await response.json()
-      router.push('/(tabs)')
-      
+      await signUp?.prepareEmailAddressVerification({
+        strategy: 'email_code'
+      })
+
+      setPendingVerification(true)
+      // const newUser = JSON.stringify(form)
+      // console.log(newUser)
+
+      // const response = await fetch('http://192.168.1.81:3005/v1/auth/register', {
+      //   method: 'POST',
+      //   body: newUser,
+      //   headers: {
+      //     'Content-Type': "application/json"
+      //   }
+      // })
+
+      // if (!response.ok) {
+      //   throw new Error('Unable to fetch data')
+      // }
+      // const data = await response.json()
+      // router.push('/(tabs)')
     } catch (err) {
-      console.error(err)
+      if (!err || typeof err !== 'object') {
+        console.error('Unknown error occurred:', err);
+        return;
+      }
+
+      const error = err as { errors?: Array<{ longMessage: string }> };
+      const errMessage = error.errors?.[0]?.longMessage;
+
+      if (!errMessage) {
+        console.error('Invalid error format:', err);
+        return;
+      }
+
+      const x = errMessage.split(' ')[0];
+      switch(x) {
+        case 'Username':
+          setErrors(prev => ({
+            ...prev,
+            userNameError : errMessage
+          }))
+          break;
+        case 'Passwords':
+          setErrors(prev => ({
+            ...prev,
+            passwordError: errMessage
+          }));
+          break;
+      }
     }
   }
 
-  const handleSubmit = () => {
+ 
+
+  const handleSubmit = async () => {
     if (validateForm()) {
-      createNewUser()
+      await createNewUser()
     } else {
       console.log('Validation failed');
     }
   };
-
 
   return (
     <KeyboardAvoidingView
@@ -134,7 +195,7 @@ const Index = () => {
           clearable
           onClear={() => handleInputChange('username', '')}
         />
-        {errors.nameError && <Text className="text-red-500">{errors.nameError}</Text>}
+        {errors.userNameError && <Text className="text-red-500">{errors.userNameError}</Text>}
 
         {/* Email Input */}
         <InputField
